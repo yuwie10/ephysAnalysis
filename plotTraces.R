@@ -6,7 +6,12 @@ library(purrr)
 library(plotly)
 library(dplyr) 
 
+
 ##Functions to analyze ephys data##
+
+
+#Fxns to process data
+
 
 #time series to data frame
 tsToDataframe <- function(ts) {
@@ -29,8 +34,8 @@ splitIdentifyData <- function(ts) {
   cap <- df[df[["sec"]] < 0.02, ]
   firstStim <- df[df[["sec"]] > 0.08 & df[["sec"]] < 0.125, ]
   bothStim <- df[df[["sec"]] > 0.08 & df[["sec"]] < 0.175, ]
-  tau <- df[df[["sec"]] > 0.08 & df[["sec"]] < 0.58, ]
-  list(cap = cap, firstStim = firstStim, bothStim = bothStim, tau = tau)
+  tauTrace <- df[df[["sec"]] > 0.08 & df[["sec"]] < 0.58, ]
+  list(cap = cap, firstStim = firstStim, bothStim = bothStim, tauTrace = tauTrace)
 }
 
 #Function to extract cap, firstStim, bothStim into 3 indiv lists
@@ -53,8 +58,7 @@ normalizeTraces <- function(df) {
   baseline <- subset(df, df$sec < 0.081) #subset to select only sec < 0.081
   avgBaseline <- mean(baseline$pA) #average baseline
   df$pA <- df$pA - avgBaseline #subtract average baseline from entire trace
-  normalized <- df
-  return(normalized)
+  return(df)
 }
 
 #Fxn to coerce large lists to dfs
@@ -73,7 +77,9 @@ listToDataFrame <- function(tracesList) {
   return(df)
 }
 
+
 #Fxns for plotting
+
 
 #Fxn to plot all traces, equivalent of show1 in Igor
 plotAll <- function(df, title = "All traces") {
@@ -88,7 +94,7 @@ plotAll <- function(df, title = "All traces") {
            title = title)
 }
 
-#Fxn to plot maximals, SFs
+#Fxn to plot maximals, SFs to check cell
 #Keep stimulus artifacts in this function
 plotMaxAndSF <- function(tracesIndexed, colorCol) {
   df <- data.frame(
@@ -103,7 +109,8 @@ plotMaxAndSF <- function(tracesIndexed, colorCol) {
 }
 
 #Fxn to color each trace by stimulation intensity
-plotColors <- function(tracesStimInt, colorCol, by = 5) {
+#Pull out just low intensity responses (<40) to compare
+plotColors <- function(tracesStimInt, colorCol = "stimInt", by = 5) {
   df_all <- data.frame(
     sec = unlist(lapply(tracesStimInt, "[[", "sec")),
     pA = unlist(lapply(tracesStimInt, "[[", "pA")),
@@ -119,10 +126,11 @@ plotColors <- function(tracesStimInt, colorCol, by = 5) {
            title = "Stimulation intensity vs. Response amplitude") 
 }
 
-#Fxn to plot individual traces (for presentations)
-#Generalize to other columns other than notes?
-plotIndivTraces <- function(df, info) {
-  filtered <- dplyr::filter(df, notes %in% info)
+#Fxn to plot individual traces
+#E.g.: colName = "id", info = c("w10", "w11") to plot waves 10 and 11
+plotIndivTraces <- function(df, colName, info) {
+  infoToPlot <- df[, colName] %in% info
+  filtered <- dplyr::filter(df, infoToPlot)
   plot_ly(filtered, x = ~sec,
           y = ~pA,
           split = ~id,
@@ -130,7 +138,28 @@ plotIndivTraces <- function(df, info) {
           line = list(color = "000000", width = 1))
 }
 
+#Overlay raw vs. smoothed traces
+#2016.10.30 Debugging
+plotRawVsSmooth <- function(dfRawData, dfSmoothedData, info) {
+  filteredRaw <- dplyr::filter(dfRawData, notes == info)
+  filteredSmooth <- dplyr::filter(dfSmoothedData, notes == info)
+  plot_ly(filteredRaw, x = ~sec,
+          y = ~pA,
+          split = ~id,
+          type = "scatter", mode = "lines",
+          line = list(color = "000000", width = 1, name = "Raw")) %>%
+    add_lines(filteredSmooth, x = ~sec,
+              y = ~pA,
+              split = ~id,
+              type = "scatter", mode = "lines",
+              line = list(color = "FF0000", width = 1, name = "Raw Smooth"))
+}
+
+plotRawVsSmooth(dfFirstStim, dfFirstSmoothed, info = "SF")
+
+
 #Fxns for analysis
+
 
 #Fxn to calculate moving average
 movingAvg <- function(x, n) {
@@ -138,7 +167,6 @@ movingAvg <- function(x, n) {
 }
 
 #Fxn to smooth data
-#Normalize traces to zero
 smoothTraces <- function(df) {
   pA <- ifelse (df$pA < 0, 
                 movingAvg(df$pA, n = 5),
@@ -162,7 +190,7 @@ findMaximals <- function(df) {
 
 #Fxn to find single fibers (SFs)
 findSFs <- function(df) {
-  filtered <- filter(df, notes %in% c("SF"))
+  filtered <- filter(df, notes == "SF")
   sf <- c()
   sf$AMPA <- min(filtered$pA, na.rm = TRUE)
   sf$NMDA <- max(filtered$pA, na.rm = TRUE)
@@ -174,7 +202,7 @@ findPPR <- function(df) {
   
   #identify max AMPA trace automatically 
   maxTraceID <- df[which.min(df$pA), "id"]
-  maxTrace <- subset(df, df$id %in% maxTraceID)
+  maxTrace <- subset(df, df$id == maxTraceID)
   
   #measure max AMPA amplitudes
   firstStim <- subset(maxTrace, maxTrace$sec > 0.08 & maxTrace$sec < 0.125)
@@ -187,24 +215,19 @@ findPPR <- function(df) {
   return(PPR)
 }
 
-#Overlay raw vs. smoothed traces
-#2016.10.30 Debugging
-plotRawVsSmooth <- function(dfRawData, dfSmoothedData, info) {
-  filteredRaw <- dplyr::filter(dfRawData, notes %in% info)
-  filteredSmooth <- dplyr::filter(dfSmoothedData, notes %in% info)
-  plot_ly(filteredRaw, x = ~sec,
-          y = ~pA,
-          split = ~id,
-          type = "scatter", mode = "lines",
-          line = list(color = "000000", width = 1, name = "Raw")) %>%
-    add_lines(filteredSmooth, x = ~sec,
-             y = ~pA,
-             split = ~id,
-             type = "scatter", mode = "lines",
-             line = list(color = "FF0000", width = 1, name = "Raw Smooth"))
+#Fxn to calculate NMDA decay constant
+findTau <- function(df) {
+  tauTrace <- subset(df, df$notes == "NMDA tau")
+  curveToFit <- subset(tauTrace, tauTrace$sec > 0.115 & tauTrace$sec < 0.54)
+  regModel <- lm(log(curveToFit$pA) ~ curveToFit$sec) #Beware of generating NaN as NMDA response decays to zero
+  regModelCoef <- coef(summary(regModel))["curveToFit$sec", "Estimate"]
+  tau <- abs(1 / regModelCoef)
+  
+  #lm plots to look at residuals
+  plot(regModel)
+  
+  return(tau)
 }
-
-plotRawVsSmooth(dfFirstStim, dfFirstSmoothed, info = "SF")
 
 
 ##Process raw data##
@@ -221,31 +244,69 @@ waveInfoNoBic <- read.xlsx("2016.10.26_noBic.xlsx")
 indexedWaves <- indexAllWaves(rawData, waveInfo)
 
 #use map fxn to iterate over each ts (wave) in indexedWaves to label data as
-#capacitance trace, first stimulation or both stimulation
+#capacitance trace, first stimulation, both stimulation or tau trace
 allWavesSplit <- purrr::map(indexedWaves, splitIdentifyData)
 
 #Generate lists of cap, firstStim and bothStim traces indexed by wave name
 capList <- extractWaves(allWavesSplit, "cap")
 firstStimList <- extractWaves(allWavesSplit, "firstStim")
 bothStimList <- extractWaves(allWavesSplit, "bothStim")
-tauList <- extractWaves(allWavesSplit, "tau")
+tauTraceList <- extractWaves(allWavesSplit, "tauTrace")
 
 #Index lists by notes and stimInt in waveInfo
 capIndexed <- purrr::map(capList, indexByInfo)
 firstStimIndexed <- purrr::map(firstStimList, indexByInfo)
 bothStimIndexed <- purrr::map(bothStimList, indexByInfo)
-tauIndexed <- purrr::map(tauList, indexByInfo)
+tauTraceIndexed <- purrr::map(tauTraceList, indexByInfo)
 
 #Normalize traces to zero
 firstStimNormalized <- purrr::map(firstStimIndexed, normalizeTraces)
 bothStimNormalized <- purrr::map(bothStimIndexed, normalizeTraces)
-tauNormalized <- purrr::map(tauIndexed, normalizeTraces)
+tauTraceNormalized <- purrr::map(tauTraceIndexed, normalizeTraces)
 
 #Lists coerced to data frames
 dfCap <- listToDataFrame(capIndexed)
 dfFirstStim <- listToDataFrame(firstStimNormalized)
 dfBothStim <- listToDataFrame(bothStimNormalized)
-dfTau <- listToDataFrame(tauNormalized)
+dfTauTrace <- listToDataFrame(tauTraceNormalized)
+
+
+##Determine if cell can be analyzed##
+
+
+#Cap trace
+#2016.11.03: Is end time always the same? 
+#Must set a threshold
+findCapDecay <- function(df) {
+  curveStart <- df[which.min(df$pA), "sec"]
+  curveToFit <- subset(df, df$sec > curveStart & df$sec < 0.011)
+  regModel <- lm(log(abs(curveToFit$pA)) ~ curveToFit$sec)
+  regModelCoef <- coef(summary(regModel))["curveToFit$sec", "Estimate"]
+  expRiseTime <- abs(1 / regModelCoef)
+  return(expRiseTime)
+}
+
+capExpRise <- purrr::map(capIndexed, findCapDecay)
+
+
+#Calculate leak currents
+findLeakCurrents <- function(df) {
+  baseline <- subset(df, df$sec < 0.081) 
+  avgBaseline <- mean(baseline$pA) 
+
+  #identify and store non-leaky traces
+  if (abs(avgBaseline) < 100) { #change threshold to 600 after debugging
+    waves <- df
+  } else {
+    return(avgBaseline)
+  }
+}
+
+leak <- purrr::map(firstStimIndexed, findLeakCurrents)
+
+#removes traces where leak > threshold
+#incorporate into fxn directly?
+leak2 <- leak[purrr::map_lgl(leak, function(x) class(x) != "numeric")]
 
 
 ##Plots section##
@@ -253,12 +314,13 @@ dfTau <- listToDataFrame(tauNormalized)
 
 #Plot all traces
 plotAll(dfBothStim, title = "All traces 2016.10.26 p15 Cell 1") #Remember to change
-plotly_POST(filename = "public-graph")
+#plotly_POST(filename = "public-graph")
 #plotAll(dfCap, title = "Capacitance traces")
 
-##Generate traces of maximals and SFs to check cell
+#Generate traces of maximals and SFs to check cell
+#Stimulation artifacts included
 plotMaxAndSF(bothStimNormalized, colorCol = "Notes") %>%
-  layout(title = "Maximals")
+  layout(title = "Maximals and SFs")
 #plotly_POST(filename = "public-graph")
 
 plotMaxAndSF(capIndexed, colorCol = "Notes") %>%
@@ -266,8 +328,11 @@ plotMaxAndSF(capIndexed, colorCol = "Notes") %>%
          hovermode = FALSE)
 #plotly_POST(filename = "public-graph")
 
+plotIndivTraces(dfFirstStim, colName = "notes", info = "SF") %>%
+  layout(title = "SFs")
+
 #Color traces by stimulation intensity
-plotColors(firstStimNormalized, color = "stimInt")
+plotColors(firstStimNormalized, colorCol = "stimInt")
 plotly_POST(filename = "public-graph")
 #plotColors(capIndexed, color = "stimInt", by = 1) 
 
@@ -290,32 +355,32 @@ subplot(
 #Store data across sessions... use R.cache library?
 #update waveInfo based on maximals...?
 
-#Parameters to measure refinement at retinogeniculate synapses
+#Standard parameters to measure refinement at retinogeniculate synapses
 maximals <- findMaximals(dfFirstSmoothed)
 SFs <- findSFs(dfFirstSmoothed)
 
 ANRatio <- maximals$AMPA / maximals$NMDA
 PPR <- findPPR(dfBothSmoothed)
 
-tau <- subset(dfTau, dfTau$notes %in% "NMDA tau")
-plotIndivTraces(dfTau, "NMDA tau")
+tau <- findTau(dfTauTrace)
+plotIndivTraces(dfTauTrace, colName = "notes", info = "NMDA tau")
 
 FFampa <- SFs$AMPA / maximals$AMPA
 FFnmda <- SFs$NMDA / maximals$NMDA
 FFcell <- (FFampa + FFnmda)/2
 
 
-#Calculate: cap trace, NMDA tau
-
 ##Are stimulation intensity and response amplitude correlated, and if so, how much?
 ##Is this correlation different over development, between sexes, etc.?
 
-#Plot amplitude vs. stimInt
+#Plot (max) amplitude vs. stimInt
 #Must plot max and min vs. stimInt
 #Must also corr to cap trace
 allNMDA <- purrr::map(dfFirstStim$pA, max)
 
-
+#also can look at when large 2nd currents appear; corr with dev?
+#when AMPA2 larger than AMPA1 (and for NMDAs too)
+#Also when does 2nd stimulus not appear?
 
 
 
@@ -349,9 +414,24 @@ plotAll(dfCapNoBic) %>%
          title = "Capacitance traces, before bicuculline")
 
 
-#2016.11.01 Next steps:
-#curve fitting
+#2016.11.03 Next steps:
+#Finalize function to pull out leaky currents
 #how to store data after analysis
+#Plot colors will have to be done with low and high stimInt separately
+#convert plotly to ggplot
+#
+# 1. Must put old data into excel sheets
+# 2. made changes on 11.03 to excel sheets, standardize earlier excel sheets
+# 
+#Reliability of response (low stimInt)
+# For low stimInt: define AMPA/NMDA max in time interval
+# plot A vs. N, analyze
+# plot A and N vs. stimInt, analyze
+# Trying to capture how the response comes in and out, esp at younger ages
+# 
+#relative development of AMPA vs NMDA
+# 5. Also measure when is AMPA component of pos response (at +40) present? 
+# lower stimInt and younger ages you see AMPA less often
 
 # R, G , B
 # Each color has values between 0 and 255 --> 16M
