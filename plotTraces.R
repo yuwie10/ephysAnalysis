@@ -352,23 +352,29 @@ subplot(
   shareY = TRUE
 )
 
-#Store data across sessions... use R.cache library?
-#update waveInfo based on maximals...?
 
 #Standard parameters to measure refinement at retinogeniculate synapses
-maximals <- findMaximals(dfFirstSmoothed)
-SFs <- findSFs(dfFirstSmoothed)
+#Store all parameters for each cell in .csv file
+parameters <- c()
 
-ANRatio <- maximals$AMPA / maximals$NMDA
-PPR <- findPPR(dfBothSmoothed)
+#add parameters from mouse info...do it automatically
 
-tau <- findTau(dfTauTrace)
+parameters$cellInfo <- "2016.10.26 Cell 1" #change (automatically?)
+
+parameters$maximals <- findMaximals(dfFirstSmoothed)
+parameters$SFs <- findSFs(dfFirstSmoothed)
+
+parameters$ANRatio <- abs(maximals$AMPA / maximals$NMDA)
+parameters$PPR <- findPPR(dfBothSmoothed)
+
+parameters$tau <- findTau(dfTauTrace)
 plotIndivTraces(dfTauTrace, colName = "notes", info = "NMDA tau")
 
-FFampa <- SFs$AMPA / maximals$AMPA
-FFnmda <- SFs$NMDA / maximals$NMDA
-FFcell <- (FFampa + FFnmda)/2
+parameters$FFampa <- SFs$AMPA / maximals$AMPA
+parameters$FFnmda <- SFs$NMDA / maximals$NMDA
+parameters$FFcell <- (FFampa + FFnmda)/2
 
+write.csv(parameters, file = "SummaryInformation.csv")
 
 ##Are stimulation intensity and response amplitude correlated, and if so, how much?
 ##Is this correlation different over development, between sexes, etc.?
@@ -376,6 +382,7 @@ FFcell <- (FFampa + FFnmda)/2
 #Plot (max) amplitude vs. stimInt
 #Must plot max and min vs. stimInt
 #Must also corr to cap trace
+#In progress as of 2016.11.03
 allNMDA <- purrr::map(dfFirstStim$pA, max)
 
 #also can look at when large 2nd currents appear; corr with dev?
@@ -416,6 +423,7 @@ plotAll(dfCapNoBic) %>%
 
 #2016.11.03 Next steps:
 #Finalize function to pull out leaky currents
+#redefine all time points in global environment
 #how to store data after analysis
 #Plot colors will have to be done with low and high stimInt separately
 #convert plotly to ggplot
