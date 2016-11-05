@@ -118,19 +118,15 @@ plotAll <- function(df, title = "All traces") {
            title = title)
 }
 
-#Fxn to plot maximals, SFs to check cell
-#Keep stimulus artifacts in this function
-plotMaxAndSF <- function(tracesIndexed, colorCol) {
-  df <- data.frame(
-    sec = unlist(lapply(tracesIndexed, "[[", "sec")),
-    pA = unlist(lapply(tracesIndexed, "[[", "pA")),
-    id = unlist(lapply(tracesIndexed, "[[", "id")),
-    waveNum = unlist(lapply(tracesIndexed, "[[", "waveNum")),
-    color = unlist(lapply(tracesIndexed, "[[", colorCol))
-  )
-  filtered <- dplyr::filter(df, color %in% c("max", "lastMax", "SF", "2F"))
-  plot_ly(filtered, x = ~sec, y = ~pA, split = ~id, line = list(width = 1)) %>%
-    add_lines(color = ~color)
+#Fxn to plot individual traces
+plotIndivTraces <- function(df, colName, info, color = "000000") {
+  infoToPlot <- df[, colName] %in% info
+  filtered <- dplyr::filter(df, infoToPlot)
+  plot_ly(filtered, x = ~sec,
+          y = ~pA,
+          split = ~id,
+          type = "scatter", mode = "lines",
+          line = list(color = color, width = 1))
 }
 
 #Fxn to color each trace by stimulation intensity
@@ -149,17 +145,6 @@ plotColors <- function(tracesStimInt, colorCol = "stimInt", by = 5) {
     add_markers(color = ~log(color),
                 marker = list(size = 3)) %>%
     layout(hovermode = FALSE) 
-}
-
-#Fxn to plot individual traces
-plotIndivTraces <- function(df, colName, info, color = "000000") {
-  infoToPlot <- df[, colName] %in% info
-  filtered <- dplyr::filter(df, infoToPlot)
-  plot_ly(filtered, x = ~sec,
-          y = ~pA,
-          split = ~id,
-          type = "scatter", mode = "lines",
-          line = list(color = color, width = 1))
 }
 
 #Overlay raw vs. smoothed traces
@@ -353,18 +338,21 @@ plotAll(dfBothStim, title = paste("All traces", date, "Cell", cellNum, age))
 #plotAll(dfCap, title = "Capacitance traces")
 
 #Generate traces of maximals and SFs to check cell
-#Stimulation artifacts included
-plotMaxAndSF(listBothStim, colorCol = "notes") %>%
-  layout(title = paste("Maximals and SFs", age))
-#plotly_POST(filename = "public-graph")
-
-plotMaxAndSF(listCap, colorCol = "notes") %>%
-  layout(title = paste("Maximal and SF capacitances", age),
+plotIndivTraces(dfBothStim, colName = "notes",
+                info = c("max", "lastMax", "SF"), color = "notes") %>%
+  layout(title = paste("Maximals and SFs", age),
          hovermode = FALSE)
-#plotly_POST(filename = "public-graph")
 
+#Capacitance traces of maximals and SFs
+plotIndivTraces(dfCap, colName = "notes",
+                info = c("max", "lastMax", "SF"), color = "notes") %>%
+  layout(title = paste("Maximals and SFs", age),
+         hovermode = FALSE)
+
+#Plot only SF
 plotIndivTraces(dfFirstStim, colName = "notes", info = "SF") %>%
   layout(title = paste("SFs", age))
+#plotly_POST(filename = "public-graph")
 
 #Color traces by stimulation intensity
 plotColors(listFirstStim, colorCol = "stimInt") %>%
@@ -376,6 +364,7 @@ plotIndivTraces(dfTauTrace, colName = "notes", info = "NMDA tau")
 #Traces with inhibitory currents (before bicuculline addition)
 plotAll(dfInhTraces) %>%
   layout(title = paste("Before bicuculline addition", age))
+
 
 ##Analyze traces##
 
