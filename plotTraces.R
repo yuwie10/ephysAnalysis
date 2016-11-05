@@ -126,7 +126,8 @@ plotIndivTraces <- function(df, colName, info, color = "000000") {
           y = ~pA,
           split = ~id,
           type = "scatter", mode = "lines",
-          line = list(color = color, width = 1))
+          line = list(color = color,
+                      width = 1))
 }
 
 #Fxn to color each trace by stimulation intensity
@@ -177,9 +178,9 @@ movingAvg <- function(x, n) {
 
 #Fxn to smooth data
 smoothTraces <- function(df) {
-  pA <- ifelse (df$pA < 0, 
-                movingAvg(df$pA, n = 5),
-                movingAvg(df$pA, n = 100)
+  pA <- ifelse (df$waveNum %% 2 == 0, 
+                movingAvg(df$pA, n = 100),
+                movingAvg(df$pA, n = 5)
   )
   dfSmoothed <- as.data.frame(pA)
   dfSmoothed$sec <- df$sec
@@ -345,7 +346,7 @@ plotIndivTraces(dfBothStim, colName = "notes",
 
 #Capacitance traces of maximals and SFs
 plotIndivTraces(dfCap, colName = "notes",
-                info = c("max", "lastMax", "SF"), color = "notes") %>%
+                info = c("max", "lastMax", "SF")) %>%
   layout(title = paste("Maximals and SFs", age),
          hovermode = FALSE)
 
@@ -411,7 +412,13 @@ write.csv(parameters, file = "SummaryInformation.csv")
 #Must plot max and min vs. stimInt
 #Must also corr to cap trace
 #In progress as of 2016.11.03
-allNMDA <- purrr::map(dfFirstStim$pA, max)
+evenTraces <- dfFirstStim$waveNum %% 2 == 0
+NMDA <- dfFirstSmoothed[evenTraces, ]
+AMPA <- dfFirstSmoothed[!evenTraces, ]
+#split each trace by id, then map over each trace by id
+
+stimInt <- waveInfo[["stimInt"]]
+
 
 #also can look at when large 2nd currents appear; corr with dev?
 #when AMPA2 larger than AMPA1 (and for NMDAs too)
