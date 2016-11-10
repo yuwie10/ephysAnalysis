@@ -252,8 +252,8 @@ timeEnd2Stim <- 0.175
 timeEndTauTrace <- 0.58
 
 #Time intervals for stimulation artifacts
-timeBeginFirstArtifact <- 0.081
-timeEndFirstArtifact <- 0.0845
+timeBeginFirstArtifact <- 0.081 
+timeEndFirstArtifact <- 0.084 #generally 0.0845
 timeBegin2Artifact <- 0.131
 timeEnd2Artifact <- 0.1325
 
@@ -262,12 +262,12 @@ timeEnd2Artifact <- 0.1325
 
 
 #read data into R from Igor format
-rawData <- read.pxp("2016.10.26_YW", ReturnTimeSeries = TRUE)
+rawData <- read.pxp("2016.11.02_YW", ReturnTimeSeries = TRUE)
 
-date <- "2016.10.26"
+date <- "2016.11.02"
 cellNum <- 1
-age <- "p15"
-waveInfo <- read.xlsx("2016.10.26_Cell1.xlsx")
+age <- "p26"
+waveInfo <- read.xlsx("2016.11.02_Mouse2_Cell1.xlsx")
 
 #Select from rawData only those waves in the spreadsheet (i.e., index by spreadsheet)
 indexedWaves <- indexAllWaves(rawData, waveInfo)
@@ -346,8 +346,8 @@ plotIndivTraces(dfBothStim, colName = "notes",
 
 #Capacitance traces of maximals and SFs
 plotIndivTraces(dfCap, colName = "notes",
-                info = c("max", "lastMax", "SF")) %>%
-  layout(title = paste("Maximals and SFs", age),
+                info = c("max", "lastMax", "SF"), color = "notes") %>%
+  layout(title = paste("Maximals and SFs capacitances", age),
          hovermode = FALSE)
 
 #Plot only SF
