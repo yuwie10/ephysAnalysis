@@ -264,9 +264,9 @@ timeEnd2Artifact <- 0.1325
 #read data into R from Igor format
 rawData <- read.pxp("2016.10.26_YW", ReturnTimeSeries = TRUE)
 
-date <- "2016.11.02"
+date <- "2016.10.26"
 cellNum <- 1
-age <- "p26"
+age <- "p15"
 waveInfo <- read.xlsx("2016.10.26_Cell1.xlsx")
 
 #Select from rawData only those waves in the spreadsheet (i.e., index by spreadsheet)
