@@ -32,4 +32,4 @@ rawData <- rawData[-1]
 dfWaves <- purrr::map(rawData, toSplitData) %>%
   listToDataFrame()
 
-write.csv(dfWaves, file = "igorForPython.csv")
+write.csv(dfWaves, file = "igorToCSV.csv")
