@@ -250,4 +250,14 @@ def plot_inhibitory(df, wave_info, date, age, cell_num):
         _ = plt.plot(inh, linewidth = 0.5)
         _ = plt.title(date + ': ' + age + ' cell ' + str(cell_num) + ' inhibitory traces (no bicuculline)')
 
+def plot_indiv_waves(df, wave_info, *args):
+    '''Plots individual waves by wave id for basic visualization'''
+    to_select = []
+    for id in args:
+        wave = wave_info[wave_info['waveName'].values == id]['waveName']
+        to_select.append(wave)
+    selection = [item for sublist in to_select for item in sublist]
+    return plt.plot(df[selection])
+
+
 
