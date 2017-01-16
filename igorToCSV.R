@@ -24,7 +24,7 @@ listToDataFrame <- function(tracesList) {
 
 
 #convert igor file to list of ts
-rawData <- read.pxp("2016.10.26_YW", regex = "w.", ReturnTimeSeries = TRUE)
+rawData <- read.pxp("/Volumes/lab_data_2/2017.01.04_YW", regex = "w.", ReturnTimeSeries = TRUE)
 #remove vars sublist
 rawData <- rawData[-1]
 
@@ -32,4 +32,4 @@ rawData <- rawData[-1]
 dfWaves <- purrr::map(rawData, toSplitData) %>%
   listToDataFrame()
 
-write.csv(dfWaves, file = "igorToCSV.csv")
+write.csv(dfWaves, file = "/Volumes/lab_data_2/2017.01.04.csv")

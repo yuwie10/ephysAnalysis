@@ -74,24 +74,63 @@ def divide_into_sections(df, begin1 = first_stim_begin, end1 = first_stim_end,
     both = df[begin1:end2]
     return first, second, both
 
-def plot_all(df, date, age, cell_num, inhibitory = False):
+def smooth(df, window = 150):
+    '''Uses rolling average window to smooth curve'''
+    smoothed = df.rolling(window).mean()
+    return smoothed
+
+def filter_waves(df, *args, wave_info, keep = True):
+    '''Filter waves by information in notes column of wave_info data frame;
+    keep is true by default'''
+    notes = wave_info.loc[:, ['waveName', 'notes']]
+    waves_index = []
+    for note in args:
+        #selects wave ids (waveName) that matches args
+        waves = list(notes[(notes['notes'] == note)]['waveName'])
+        waves_index.append(waves)
+        
+    if len(waves) == 0:
+        if note == 'noBic':
+            print('inhibitory waves not present (bicuculline present)')
+        if note == '2F':
+            print('no secondary fibers')
+        if note == 'lastMax':
+            print('no final maximals')
+        if note == '2nd':
+            pass
+        if note == 'SF':
+            print('no single fibers')
+        
+    final_waves = [item for sublist in waves_index for item in sublist]
+    
+    if keep:
+        df = df[final_waves]
+    elif keep == False: 
+        df = df.drop(final_waves, 1)
+    
+    return df
+
+def plot_all(df, wave_info, date, age, cell_num):
     '''
     Plot all waves.
     Arguments: df of waves, date of cell, cell number, age of mouse
     '''
-    sns.axes_style('darkgrid')
-    sns.set_palette('husl')
-    fig, ax = plt.subplots()
-    fig.set_size_inches(11.7, 8.27)
     
-    _ = plt.plot(df, linewidth = 0.5)
-    _ = plt.xlabel('seconds')
-    _ = plt.ylabel('pA')
-    
-    if inhibitory == False:
-        _ = plt.title(date + ': ' + age + ' cell ' + str(cell_num))
+    #remove noBic, test and NMDA tau waves
+    df1 = filter_waves(df, 'noBic', 'test', 'NMDA tau', wave_info = wave_info, keep = False)
+    if df1.empty:
+        pass
     else:
-        _ = plt.title(date + ': ' + age + ' cell ' + str(cell_num) + ' inhibitory traces (no bicuculline)')
+        sns.axes_style('darkgrid')
+        sns.set_palette('husl')
+        fig, ax = plt.subplots()
+        fig.set_size_inches(11.7, 8.27)
+
+        _ = plt.plot(df1, linewidth = 0.5)
+        _ = plt.xlabel('seconds')
+        _ = plt.ylabel('pA')
+        _ = plt.title(date + ': ' + age + ' cell ' + str(cell_num))
+
 
 def calculate_maximals(df, second, wave_info):
     '''Calculate maximals. Because of noise, amplitude of failure traces must be averaged.
@@ -142,37 +181,6 @@ def find_maxAN_toplot(df_first, df_both, wave_info, second = False):
     #create df of merged AMPA and NMDA maximal waves
     max_AN = df_both.filter(recombine_AN(maxA, maxN))
     return max_AN
-
-def filter_waves(df, *args, wave_info, keep = True):
-    '''Filter waves by information in notes column of wave_info data frame;
-    keep is true by default'''
-    notes = wave_info.loc[:, ['waveName', 'notes']]
-    waves_index = []
-    for note in args:
-        #selects wave ids (waveName) that matches args
-        waves = list(notes[(notes['notes'] == note)]['waveName'])
-        waves_index.append(waves)
-        
-    if len(waves) == 0:
-        if note == 'noBic':
-            print('inhibitory waves not present (bicuculline present)')
-        if note == '2F':
-            print('no secondary fibers')
-        if note == 'lastMax':
-            print('no final maximals')
-        if note == '2nd':
-            pass
-        if note == 'SF':
-            print('no single fibers')
-        
-    final_waves = [item for sublist in waves_index for item in sublist]
-    
-    if keep:
-        df = df[final_waves]
-    elif keep == False: 
-        df = df.drop(final_waves, 1)
-    
-    return df
 
 def plot_max_SF(df_first, df_both, wave_info, date, age, cell_num):
     '''
@@ -232,4 +240,14 @@ def plot_inhibitory(df, wave_info, date, age, cell_num):
     if len(inh.columns) == 0:
         pass
     else:
-        plot_all(inh, date = date, age = age, cell_num = cell_num, inhibitory = True)
+        sns.axes_style('darkgrid')
+        sns.set_palette('husl')
+        fig, ax = plt.subplots()
+        fig.set_size_inches(11.7, 8.27)
+
+        _ = plt.xlabel('seconds')
+        _ = plt.ylabel('pA')
+        _ = plt.plot(inh, linewidth = 0.5)
+        _ = plt.title(date + ': ' + age + ' cell ' + str(cell_num) + ' inhibitory traces (no bicuculline)')
+
+
