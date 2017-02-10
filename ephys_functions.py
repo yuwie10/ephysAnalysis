@@ -217,20 +217,35 @@ def plot_max_SF(df_first, df_both, wave_info, date, age, cell_num):
 
 def plot_SF(df_both, wave_info, date, age, cell_num):
     SFs = filter_waves(df_both, 'SF', wave_info = wave_info)
-    if SFs.empty:
+    SiFs = filter_waves(df_both, 'SiF', wave_info = wave_info)
+    if SFs.empty & SiFs.empty:
         pass
     else:
-        #set figure style
-        sns.axes_style('darkgrid')
-        fig, ax = plt.subplots()
-        fig.set_size_inches(11.7, 8.27)
-        _ = plt.plot(SFs, color = 'k', label = 'SF', linewidth = 0.5)
+        if SFs.empty:
+            pass
+        else:
+            #set figure style
+            sns.axes_style('darkgrid')
+            fig, ax = plt.subplots()
+            fig.set_size_inches(11.7, 8.27)
+            _ = plt.plot(SFs, color = 'k', label = 'SF', linewidth = 0.5)
 
-    #plot attributes
-        _ = plt.legend(loc = 4, fontsize = 'x-small', ncol = 3)
-        _ = plt.title(date + ': ' + age + ' cell ' + str(cell_num) + ' single fibers')
-        _ = plt.xlabel('seconds')
-        _ = plt.ylabel('pA')
+            #plot attributes
+            _ = plt.legend(loc = 4, fontsize = 'x-small', ncol = 3)
+            _ = plt.title(date + ': ' + age + ' cell ' + str(cell_num) + ' single fibers')
+            _ = plt.xlabel('seconds')
+            _ = plt.ylabel('pA')
+
+        if SiFs.empty:
+            pass
+        else:
+            #avg SiF
+            SiF_mean = pd.DataFrame()
+            SiF_mean['AMPA'] = SiFs[SiFs.columns[::2]].mean(axis = 1)
+            SiF_mean['NMDA'] = SiFs[SiFs.columns[1::2]].mean(axis = 1)
+            _ = plt.plot(SiFs, color = '0.5', label = 'SiFs', linewidth = 0.2)
+            _ = plt.plot(SiF_mean, color = 'm', label = 'SiF mean', linewidth = 0.5)
+
 
 def find_cap_wave(df, begin = 0, end = end_cap):
     return df[begin:end]
