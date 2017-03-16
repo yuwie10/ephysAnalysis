@@ -192,6 +192,7 @@ def plot_max_SF(df_first, df_both, wave_info, date, age, cell_num):
     maxes = find_maxAN_toplot(df_first, df_both, wave_info)
     SFs = filter_waves(df_both, 'SF', wave_info = wave_info)
     last_max = filter_waves(df_both, 'lastMax', wave_info = wave_info)
+    second_fiber = filter_waves(df_both, '2F', wave_info = wave_info)
     
     #set figure style
     sns.axes_style('darkgrid')
@@ -204,6 +205,11 @@ def plot_max_SF(df_first, df_both, wave_info, date, age, cell_num):
         pass
     else:
         _ = plt.plot(SFs, color = 'k', label = 'SF', linewidth = 0.5)
+    if second_fiber.empty:
+        pass
+    else:
+        _ = plt.plot(second_fiber, color = 'm', label = '2nd fiber', 
+            linewidth = 0.5)
     if last_max.empty:
         pass
     else:
