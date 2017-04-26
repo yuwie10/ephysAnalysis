@@ -91,11 +91,11 @@ def filter_waves(df, *args, wave_info, keep = True):
         
     if len(waves) == 0:
         if note == 'noBic':
-            print('inhibitory waves not present (bicuculline present)')
+            print('no inhibitory waves (bicuculline present)')
         if note == '2F':
-            print('no secondary fibers')
+            pass
         if note == 'lastMax':
-            print('no final maximals')
+            pass
         if note == '2nd':
             pass
         if note == 'SF':
@@ -152,6 +152,13 @@ def calculate_maximals(df, second, wave_info):
     df_of_maximals.ix[failures_amp.index] = abs(failures_amp)
     
     return df_of_maximals, failures_amp.index
+
+def split_cols_AN(df):
+    '''Split df where rows are waves into AMPA/NMDA,
+    returns AMPA and NMDA'''
+    AMPA = df[df.columns[::2]]
+    NMDA = df[df.columns[1::2]]
+    return AMPA, NMDA
 
 def split_rows_AN(df):
     '''Split df where rows are waves into AMPA/NMDA,
@@ -291,5 +298,42 @@ def plot_indiv_waves(df, wave_info, *args):
     return plt.plot(df[selection])
 
 
+def find_cap_peak(df,  wave_info, note = 'SF'):
+    
+    '''
+    Finds capacitance peaks of minimal response traces.
+    Checks that peak values are within 20% of one another; otherwise there may be noise.
+    
+    Returns the peak of the capacitance traces.
+    '''
+    
+    min_A = filter_waves(df, note, wave_info = wave_info).min()[0]
+    min_N = filter_waves(df, note, wave_info = wave_info).min()[1]
+    
+    #check difference between capacitance traces
+    #if np.abs(min_A - min_N) > np.abs((min_A - (min_A * 0.2)) or min_A + (min_A * 0.2)):
+    #    raise ValueError('min response capacitances differ, please check traces')
+    #else:
+    return min_A, min_N
 
 
+def calc_percent_range(num, percent = 0.2):
+    return num - num * percent, num + num * percent
+
+def filter_by_cap(df_full, min_value):
+    
+    '''
+    Filters dataframe with all (capacitance) traces by those whose peaks are +/- 20%
+    of the minimal response peak.
+    
+    Inputs: 
+    df_full: df of all (cap) traces
+    min_value: capacitance peak
+    
+    Output: filtered df
+    '''
+    
+    upper, lower = calc_percent_range(min_value)
+    cap_mins = df_full.min()
+    filter_index = cap_mins[(cap_mins > lower) & (cap_mins < upper)].index
+    return df_full[filter_index]
