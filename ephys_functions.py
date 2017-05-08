@@ -320,7 +320,7 @@ def find_cap_peak(df,  wave_info, note = 'SF'):
 def calc_percent_range(num, percent = 0.2):
     return num - num * percent, num + num * percent
 
-def filter_by_cap(df_full, min_value):
+def filter_by_cap(df_full, min_value, percent = 0.2):
     
     '''
     Filters dataframe with all (capacitance) traces by those whose peaks are +/- 20%
@@ -333,7 +333,7 @@ def filter_by_cap(df_full, min_value):
     Output: filtered df
     '''
     
-    upper, lower = calc_percent_range(min_value)
+    upper, lower = calc_percent_range(min_value, percent = percent)
     cap_mins = df_full.min()
     filter_index = cap_mins[(cap_mins > lower) & (cap_mins < upper)].index
     return df_full[filter_index]
